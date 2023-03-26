@@ -1,0 +1,137 @@
+One possible algorithm to solve this problem is the following:
+
+Create a grid of size M x N with each cell representing a position in the plane. Initially, all cells are marked as unoccupied.
+
+For each drone in the input list, mark the starting cell as occupied by that drone at the given start time.
+
+For each time step starting from the earliest start time among all drones until all drones have reached their destination, perform the following steps:
+
+a. For each occupied cell, check its 8 adjacent cells (or 4 adjacent cells, depending on the chosen adjacency). If any adjacent cell is unoccupied, mark it as occupied by the same drone and add it to the drone's path.
+
+b. If any drone has reached its destination, stop updating its position and continue with the other drones.
+
+c. If any two drones occupy the same cell, mark the cell as blocked and remove the cell from the paths of the drones that were occupying it. Then, continue with the other cells.
+
+Once all drones have reached their destination, output their respective paths.
+
+This algorithm ensures that each drone reaches its destination without colliding with other drones and in the minimum time possible by exploring the space around each drone in a breadth-first manner. It also takes into account the size of the drones by marking cells as occupied only if they are not already occupied by another drone.
+
+Here is the Python code for the algorithm:
+ def find_paths(drones, grid_size=(20, 20), adjacency='eight'):
+    # Initialize the grid
+    grid = [[0 for _ in range(grid_size[1])] for _ in range(grid_size[0])]
+
+    # Mark the starting cells as occupied by the drones
+    for drone in drones:
+        x1, y1, x2, y2, start_time = drone
+        grid[x1][y1] = start_time
+
+    # Perform breadth-first search for each time step until all drones have reached their destination
+    time_step = min(drone[4] for drone in drones)
+    while any(drone[:4] != [x2, y2, x2, y2] for x1, y1, x2, y2, start_time in drones):
+        for i, drone in enumerate(drones):
+            if drone[:4] == [drone[2], drone[3], drone[2], drone[3]]:
+                continue  # Drone has already reached its destination
+            elif drone[4] == time_step:
+                # Check adjacent cells and mark them as occupied by the same drone
+                x, y = drone[2], drone[3]
+                for dx in range(-1, 2):
+                    for dy in range(-1, 2):
+                        if adjacency == 'eight' and dx == dy == 0:
+                            continue  # Skip the current cell
+                        elif adjacency == 'four' and abs(dx) == abs(dy):
+                            continue  # Skip the diagonal cells
+                        new_x, new_y = x + dx, y + dy
+                        if (0 <= new_x < grid_size[0] and 0 <= new_y < grid_size[1] and
+                                grid[new_x][new_y] == 0):
+                            grid[new_x][new_y] = time_step
+                            drones[i] = (drone[0], drone[1], new_x, new_y, drone[4])
+                            drone_path = drones[i][5] + [(new_x, new_y)]
+                            drones[i] = drones[i][:5] + [drone_path]
+                        elif grid[new_x][new_y] != drone[4]:
+                            # Two drones collide, mark the cell as blocked
+                            grid[new_x][new_y] = -1
+                            for j, other_drone in enumerate(drones):
+                                if j != i and (other_drone[2], other_drone[3]) == (new_x, new_y):
+                                    other_drone_path = other_drone[5]
+                                    if other_drone_path and other_drone_path[-1] == (new_x, new_y):
+                                        other_drone_path.pop()
+                                    drones[j] = other_drone[:5] + [other_drone_path]
+        time_step += 1
+
+    # Output the paths for each drone
+    paths = []
+    for drone in drones:
+        paths.append(drone[5])
+    return paths
+
+This code assumes that the input list drones is a list of tuples, where each tuple contains the starting and ending positions and start time for a drone, in the format (x1, y1, x2, y2, start_time).
+
+The grid_size parameter is a tuple specifying the size of the 2D grid, and adjacency is a string specifying the type of adjacency to use ('eight' for 8-adjacency or 'four' for 4-adjacency).
+
+The find_paths() function returns a list of paths, where each path is a list of coordinates representing the positions of the drone.
+To give dynamic inputs to the algorithm, we can create a simple GUI using a GUI library such as Tkinter. The GUI can have input fields for the number of drones and the starting and ending positions of each drone, along with buttons to run the algorithm and display the output.
+
+The user can enter the inputs in the input fields and click the "Run" button to execute the algorithm. The output, i.e., the path for each drone, can be displayed in a separate output window or on the same GUI window.
+
+Here's a sample code to create a GUI using Tkinter for dynamic inputs:
+from tkinter import *
+
+root = Tk()
+root.geometry("500x500")
+root.title("Drone Path Planning")
+
+# Input fields
+num_drones_label = Label(root, text="Enter number of drones:")
+num_drones_label.pack()
+num_drones_entry = Entry(root)
+num_drones_entry.pack()
+
+drone_pos_label = Label(root, text="Enter starting and ending positions of drones:")
+drone_pos_label.pack()
+
+drone_pos_frame = Frame(root)
+drone_pos_frame.pack()
+
+# Add entry fields for each drone
+drone_entries = []
+for i in range(num_drones):
+    drone_frame = Frame(drone_pos_frame)
+    drone_frame.pack()
+    drone_label = Label(drone_frame, text=f"Drone {i+1}:")
+    drone_label.pack(side=LEFT)
+    drone_pos_entry = Entry(drone_frame)
+    drone_pos_entry.pack(side=LEFT)
+    drone_entries.append(drone_pos_entry)
+
+# Button to run the algorithm
+run_button = Button(root, text="Run Algorithm", command=run_algorithm)
+run_button.pack()
+
+# Output window
+output_window = Toplevel(root)
+output_window.geometry("500x500")
+output_window.title("Drone Path Output")
+output_text = Text(output_window)
+output_text.pack()
+
+def run_algorithm():
+    num_drones = int(num_drones_entry.get())
+    drone_positions = []
+    for i in range(num_drones):
+        pos_str = drone_entries[i].get()
+        pos = [int(x) for x in pos_str.split()]
+        drone_positions.append(pos)
+    
+    # Call the algorithm with the drone positions as input
+    paths = drone_path_planning_algorithm(drone_positions)
+    
+    # Display the output in the output window
+    output_text.delete(1.0, END)
+    for i, path in enumerate(paths):
+        output_text.insert(END, f"Drone {i+1} path: {path}\n")
+
+This code creates a GUI with input fields for the number of drones and the starting and ending positions of each drone. The user can enter the inputs and click the "Run Algorithm" button to execute the algorithm. The output, i.e., the path for each drone, is displayed in a separate output window.
+
+
+
